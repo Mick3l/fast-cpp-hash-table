@@ -1,3 +1,3 @@
-add_executable(main main.cpp)
+add_executable(hashtable_main main.cpp)
 
-target_include_directories(main PRIVATE ${PROJECT_SOURCE_DIR})
+target_include_directories(hashtable_main PRIVATE ${PROJECT_SOURCE_DIR})
