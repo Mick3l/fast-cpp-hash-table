@@ -1,10 +1,11 @@
 #include <iostream>
 
+#include "hash.h"
 
 int main() {
-    std::ios::sync_with_stdio(false);
-    std::cin.tie(nullptr);
-    std::cout.tie(nullptr);
+    mtl::hash_map<std::string, int> map(100);
+    map.Insert("hello",4);
+    std::cout << map["hello"];
 
     return 0;
 }

@@ -4,7 +4,6 @@
 #include <unordered_set>
 #include <iostream>
 #include <map>
-#include <lib/hash.h>
 
 #include "lib/hash.h"
 
