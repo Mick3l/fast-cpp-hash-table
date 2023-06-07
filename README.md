@@ -1,7 +1,7 @@
 # Fast c++ Hash table implementation
 
 # Cmake
-If you already have a CMake project you can integrate C++ Requests with `fetch_content`.
+If you already have a CMake project you can integrate Hash Table with `fetch_content`.
 Add the following to your `CMakeLists.txt`.
 
 
