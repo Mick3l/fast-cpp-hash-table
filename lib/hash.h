@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <algorithm>
+#include <memory>
 
 namespace mtl {
 
@@ -40,12 +41,14 @@ namespace mtl {
 
             inline bool operator>(const iterator& other) const { return idx > other.idx; }
 
-            inline U& operator*() { return hashTable.array[idx]; };
+            inline U& operator*() { return hashTable->array[idx]; };
+
+            inline U& operator->() { return hashTable->array[idx]; }
 
         private:
             size_t idx;
 
-            HashTable_impl& hashTable;
+            HashTable_impl* hashTable;
         };
 
 
@@ -59,6 +62,9 @@ namespace mtl {
 
         template<typename KeyByValue>
         void Insert(const T& key, const U& value);
+
+        template<typename KeyByValue>
+        void Insert(const T& key, U&& value);
 
         void Delete(const T& key);
 
@@ -88,7 +94,7 @@ namespace mtl {
     template<typename T, typename U, typename Compare, typename Alloc, typename Hash>
     HashTable<T, U, Compare, Alloc, Hash>::iterator::iterator(size_t idx, HashTable_impl& hashTable):idx(idx),
                                                                                                      hashTable(
-                                                                                                             hashTable) {
+                                                                                                             &hashTable) {
 
     }
 
@@ -96,7 +102,7 @@ namespace mtl {
     typename HashTable<T, U, Compare, Alloc, Hash>::iterator&
     HashTable<T, U, Compare, Alloc, Hash>::iterator::operator++() {
         ++idx;
-        while (idx < hashTable.capacity && hashTable.deleted[idx] != 0) {
+        while (idx < hashTable->capacity && hashTable->deleted[idx] != 0) {
             ++idx;
         }
         return *this;
@@ -106,7 +112,7 @@ namespace mtl {
     typename HashTable<T, U, Compare, Alloc, Hash>::iterator&
     HashTable<T, U, Compare, Alloc, Hash>::iterator::operator--() {
         --idx;
-        while (idx <= hashTable.capacity && hashTable.deleted[idx] != 0) {
+        while (idx <= hashTable->capacity && hashTable->deleted[idx] != 0) {
             --idx;
         }
         return *this;
@@ -166,7 +172,7 @@ namespace mtl {
         _deleted[idx] = 0;
         ++_size;
         if (_size >= _capacity >> 1u) {
-            Rehash(_capacity  << 1u, KeyByValue());
+            Rehash(_capacity << 1u, KeyByValue());
         }
     }
 
@@ -256,17 +262,46 @@ namespace mtl {
         return HashTable::iterator(impl.capacity, impl);
     }
 
+    template<typename T, typename U, typename Compare, typename Alloc, typename Hash>
+    template<typename KeyByValue>
+    void HashTable<T, U, Compare, Alloc, Hash>::Insert(const T& key, U&& value) {
+        auto hash = impl(key) % _capacity;
+        int32_t idx = -1;
+        while (_deleted[hash] != -1 && !impl.compare(_array[hash], key)) {
+            ++hash;
+            if (hash >= _capacity) {
+                hash -= _capacity;
+            }
+            if (_deleted[hash] && idx == -1) {
+                idx = hash;
+            }
+        }
+        if (_deleted[hash] != -1) {
+            _array[hash] = std::move(value);
+            return;
+        }
+        if (idx < 0) {
+            idx = hash;
+        }
+        _array[idx] = std::move(value);
+        _deleted[idx] = 0;
+        ++_size;
+        if (_size >= _capacity >> 1u) {
+            Rehash(_capacity << 1u, KeyByValue());
+        }
+    }
+
     template<typename T, typename U, typename Alloc = std::allocator<std::pair<T, U>>, typename Hash = std::hash<T>>
     class hash_map {
     private:
         struct Compare {
-            inline bool operator()(std::pair<T, U> pair, T key) {
+            inline bool operator()(const std::pair<T, U>& pair, T key) const {
                 return pair.first == key;
             }
         };
 
         struct KeyByValue {
-            inline T operator()(std::pair<T, U> pair) {
+            inline const T& operator()(const std::pair<T, U>& pair) const {
                 return pair.first;
             }
         };
@@ -285,6 +320,10 @@ namespace mtl {
 
         inline void Insert(const T& key, const U& value) {
             hashTable.template Insert<KeyByValue>(key, std::make_pair(key, value));
+        };
+
+        inline void Insert(const T& key, U&& value) {
+            hashTable.template Insert<KeyByValue>(key, std::make_pair(key, std::move(value)));
         };
 
         inline void Delete(const T& key) { hashTable.Delete(key); };

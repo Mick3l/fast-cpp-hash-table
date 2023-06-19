@@ -244,3 +244,88 @@ TEST(FunctionalHashMultiSetTest, SimpleOperationsTest) {
     MTL_Set.Delete("hello");
     ASSERT_FALSE(MTL_Set.Contains("hello"));
 }
+
+TEST(IteratorHashMapTest, DecrementTest) {
+    mtl::hash_map<std::string, int> MTL_Map;
+    MTL_Map.Insert("hello", 20);
+    MTL_Map.Insert("world", 45);
+    auto iterator = MTL_Map.end();
+    --iterator;
+    ASSERT_EQ(++MTL_Map.begin(), iterator);
+}
+
+TEST(IteratorHashMapTest, AssignTest) {
+    mtl::hash_map<std::string, int> MTL_Map;
+    MTL_Map.Insert("hello", 20);
+    MTL_Map.Insert("world", 45);
+    MTL_Map.Insert("abc", 200);
+    auto iterator1 = MTL_Map.begin();
+    auto iterator2 = --MTL_Map.end();
+    iterator1 = --iterator2;
+    ASSERT_EQ(++MTL_Map.begin(), iterator2);
+}
+
+class Foo {
+public:
+    Foo() : bar() {}
+
+    explicit Foo(std::string&& string) : bar(std::move(string)) {}
+
+    Foo(Foo& other) = delete;
+
+    Foo& operator=(Foo& other) = delete;
+
+    Foo& operator=(Foo&& other) noexcept {
+        bar = std::move(other.bar);
+        return *this;
+    };
+
+    Foo(Foo&& other) noexcept : bar(std::move(other.bar)) {}
+
+    ~Foo() = default;
+
+    std::string bar;
+};
+
+TEST(FunctionalHashMapTest, NoCopyConstructorTest) {
+    mtl::hash_map<std::string, Foo> MTL_Map{};
+    MTL_Map.Insert("hello", Foo("11"));
+    MTL_Map.Insert("world", Foo("45"));
+    MTL_Map.Insert("abc", Foo("200"));
+    MTL_Map.Insert("a", Foo("8"));
+    MTL_Map.Insert("b", Foo("8"));
+    MTL_Map.Insert("c", Foo("8"));
+    ASSERT_TRUE(MTL_Map.Contains("hello"));
+    ASSERT_FALSE(MTL_Map.Contains("wrold"));
+    MTL_Map.Insert("hello", Foo("28"));
+    ASSERT_EQ(MTL_Map["hello"].bar, "28");
+    MTL_Map.Delete("hello");
+    ASSERT_FALSE(MTL_Map.Contains("hello"));
+}
+
+TEST(PerformanceHashMapTest, NoCopyConstructorTest) {
+    std::cout << "InsertTest\n";
+    mtl::hash_map<int, Foo> MTL_MAP(5e6);
+    std::unordered_map<int, Foo> STD_Map(5e6);
+    std::vector<std::pair<int, Foo>> tests_std;
+    std::vector<std::pair<int, Foo>> tests_mtl;
+    for (int i = 0; i < 1e6; ++i) {
+        int key = rand();
+        int value = rand();
+        tests_std.emplace_back(key, std::to_string(value));
+        tests_mtl.emplace_back(key, std::to_string(value));
+    }
+    auto start = std::chrono::steady_clock::now();
+    for (int i = 0; i < 1e6; ++i) {
+        MTL_MAP.Insert(tests_mtl[i].first, std::move(tests_mtl[i].second));
+    }
+    auto end = std::chrono::steady_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << '\n';
+    start = std::chrono::steady_clock::now();
+    for (int i = 0; i < 1e6; ++i) {
+        STD_Map[tests_std[i].first] = Foo(std::move(tests_std[i].second));
+    }
+    end = std::chrono::steady_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << '\n';
+}
+
