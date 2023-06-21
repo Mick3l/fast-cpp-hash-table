@@ -27,6 +27,8 @@ namespace mtl {
 
             iterator& operator=(const iterator& other) = default;
 
+            iterator(const iterator& other) = default;
+
             inline iterator& operator++();
 
             inline iterator& operator--();
@@ -254,7 +256,11 @@ namespace mtl {
 
     template<typename T, typename U, typename Compare, typename Alloc, typename Hash>
     typename HashTable<T, U, Compare, Alloc, Hash>::iterator HashTable<T, U, Compare, Alloc, Hash>::begin() {
-        return HashTable::iterator(0, impl);
+        size_t index = 0;
+        while(_deleted[index]){
+            ++index;
+        }
+        return HashTable::iterator(index, impl);
     }
 
     template<typename T, typename U, typename Compare, typename Alloc, typename Hash>
