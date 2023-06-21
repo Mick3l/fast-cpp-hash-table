@@ -43,7 +43,7 @@ namespace mtl {
 
             inline U& operator*() { return hashTable->array[idx]; };
 
-            inline U& operator->() { return hashTable->array[idx]; }
+            inline U* operator->() { return hashTable->array + idx; }
 
         private:
             size_t idx;
